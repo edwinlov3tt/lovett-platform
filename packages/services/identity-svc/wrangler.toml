@@ -1,0 +1,42 @@
+name = "identity-svc"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ---------------------------------------------------------------
+# Intentionally NO `routes` block. Identity is internal-only — it
+# must never be reachable from the public internet. The only way
+# to invoke it is via a Workers RPC service binding from another
+# Worker in the same Cloudflare account (e.g. auth-gateway).
+# ---------------------------------------------------------------
+
+[[d1_databases]]
+binding = "DB"
+database_name = "identity-db"
+database_id = "local_dev_identity_db"   # replaced per-env below
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
+
+# ---- env vars (non-secret) live here. Secrets via `wrangler secret put`:
+#   JWT_SECRET        — HS256 signing key. Must match auth-gateway's.
+# ---------------------------------------------------------------
+
+[env.staging]
+name = "identity-svc-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "identity-db"
+database_id = "REPLACE_ME_staging_d1_id"
+migrations_dir = "migrations"
+
+[env.production]
+name = "identity-svc-prod"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "identity-db"
+database_id = "REPLACE_ME_production_d1_id"
+migrations_dir = "migrations"

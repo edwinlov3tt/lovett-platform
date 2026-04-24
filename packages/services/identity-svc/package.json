@@ -1,0 +1,43 @@
+{
+  "name": "@lovett/identity-svc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Identity service (WorkerEntrypoint). Owns the identity-db D1 database. Called via Workers service binding from auth-gateway and any other platform Worker that needs session validation.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply identity-db",
+    "db:migrate:staging": "wrangler d1 migrations apply identity-db --env staging --remote",
+    "db:migrate:production": "wrangler d1 migrations apply identity-db --env production --remote",
+    "clean": "rm -rf dist .turbo .wrangler"
+  },
+  "dependencies": {
+    "@lovett/auth-types": "workspace:*",
+    "@lovett/db-utils": "workspace:*",
+    "drizzle-orm": "^0.36.4",
+    "jose": "^5.9.6",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.38",
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.7.2",
+    "vitest": "2.1.8",
+    "wrangler": "^3.99.0"
+  }
+}

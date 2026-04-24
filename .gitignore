@@ -1,0 +1,28 @@
+# ---- dependencies + tooling caches ----
+node_modules/
+.pnpm-store/
+.turbo/
+dist/
+coverage/
+
+# ---- Cloudflare / Wrangler local state ----
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# ---- editor / OS ----
+.DS_Store
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+
+# ---- env ----
+.env
+.env.local
+.env.*.local
+
+# ---- secrets source-of-truth files (Worker secrets are write-only on CF,
+# so keys meant for `wrangler secret put ... < file` are gitignored here)
+.account-keys.json
+.secrets.local

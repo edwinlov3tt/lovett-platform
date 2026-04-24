@@ -1,0 +1,39 @@
+{
+  "name": "@lovett/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consumer SDK for Lovett Platform auth. Core client is framework-agnostic (vanilla JS / Svelte / Vue / Solid); React hooks are an opt-in /react subpath.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@lovett/auth-types": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.17",
+    "react": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vitest": "2.1.8"
+  }
+}

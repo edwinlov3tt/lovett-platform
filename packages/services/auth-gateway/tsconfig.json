@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers"],
+    "jsx": "preserve",
+    "paths": {
+      "@lovett/auth-types": ["../../shared/auth-types/src/index.ts"],
+      "@lovett/db-utils": ["../../shared/db-utils/src/index.ts"],
+      "@lovett/identity-svc": ["../identity-svc/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

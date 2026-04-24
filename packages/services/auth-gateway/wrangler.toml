@@ -1,0 +1,67 @@
+name = "auth-gateway"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Public. The custom domain (auth.edwinlovett.com) gets attached here
+# after first deploy; until then wrangler's *.workers.dev URL works.
+# [[routes]]  # uncomment + fill in once DNS is wired
+# pattern = "auth.edwinlovett.com/*"
+# zone_name = "edwinlovett.com"
+
+# Identity is reached over an RPC service binding — never fetch-over-HTTP.
+[[services]]
+binding = "IDENTITY"
+service = "identity-svc"
+
+[observability]
+enabled = true
+
+# ---- env vars (non-secret) ------------------------------------------------
+# Secrets (set per env via `wrangler secret put <NAME> --env <env>`):
+#   JWT_SECRET              — HS256 signing key. Must match identity-svc.
+#   RESEND_API_KEY          — transactional email sender.
+# --------------------------------------------------------------------------
+
+[vars]
+# Local dev defaults. Override per deploy env below.
+MAGIC_LINK_FROM_ADDRESS = "noreply@edwinlovett.com"
+COOKIE_DOMAIN = "localhost"                           # parent-scope for cross-subdomain SSO
+ALLOWED_ORIGINS = "http://localhost:3000,http://localhost:8787"
+ALLOWED_REDIRECT_HOSTS = "localhost,127.0.0.1"
+PLATFORM_NAME = "Lovett Platform"
+GATEWAY_ORIGIN = "http://localhost:8787"
+
+# ---- staging ------------------------------------------------------------
+
+[env.staging]
+name = "auth-gateway-staging"
+
+[[env.staging.services]]
+binding = "IDENTITY"
+service = "identity-svc-staging"
+
+[env.staging.vars]
+MAGIC_LINK_FROM_ADDRESS = "noreply@edwinlovett.com"
+COOKIE_DOMAIN = ".edwinlovett.com"
+ALLOWED_ORIGINS = "https://auth-staging.edwinlovett.com,https://*.edwinlovett.com"
+ALLOWED_REDIRECT_HOSTS = "edwinlovett.com"            # matches any *.edwinlovett.com via endsWith check
+PLATFORM_NAME = "Lovett Platform (staging)"
+GATEWAY_ORIGIN = "https://auth-staging.edwinlovett.com"
+
+# ---- production ---------------------------------------------------------
+
+[env.production]
+name = "auth-gateway-prod"
+
+[[env.production.services]]
+binding = "IDENTITY"
+service = "identity-svc-prod"
+
+[env.production.vars]
+MAGIC_LINK_FROM_ADDRESS = "noreply@edwinlovett.com"
+COOKIE_DOMAIN = ".edwinlovett.com"
+ALLOWED_ORIGINS = "https://*.edwinlovett.com"
+ALLOWED_REDIRECT_HOSTS = "edwinlovett.com"
+PLATFORM_NAME = "Lovett Platform"
+GATEWAY_ORIGIN = "https://auth.edwinlovett.com"
