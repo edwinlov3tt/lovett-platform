@@ -5,6 +5,10 @@ node_modules/
 dist/
 coverage/
 
+# Rendered HTML previews from `pnpm preview:auth`. Regenerable output;
+# the source renderers live in packages/services/auth-gateway/src/pages/.
+.previews/
+
 # ---- Cloudflare / Wrangler local state ----
 .wrangler/
 .dev.vars
