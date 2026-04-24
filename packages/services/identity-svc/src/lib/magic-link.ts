@@ -24,6 +24,7 @@ import {
   prefixedId,
   randomTokenBase64url,
   sha256Hex,
+  timingSafeEqual,
 } from "@lovett/db-utils";
 import { magicLinkTokens } from "../db/schema.js";
 
@@ -91,6 +92,14 @@ export class MagicLinkStore {
     const row = rows[0];
 
     if (!row) return { ok: false, reason: "not_found" };
+    // Defense-in-depth: re-compare the stored hash against our computed
+    // hash using a constant-time operation. The initial DB lookup is
+    // already an equality match, but SQLite's comparison isn't specified
+    // as timing-safe. Doubling up here costs a handful of microseconds
+    // and forecloses the byte-at-a-time timing attack class entirely.
+    if (!timingSafeEqual(row.tokenHash, tokenHash)) {
+      return { ok: false, reason: "not_found" };
+    }
     if (row.usedAt !== null) return { ok: false, reason: "already_used" };
     if (row.expiresAt <= now) return { ok: false, reason: "expired" };
 

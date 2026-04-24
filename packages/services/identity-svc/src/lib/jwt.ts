@@ -48,14 +48,18 @@ export class JwtSigner {
    * decision, not a crypto-layer one.
    */
   async sign(claims: JwtClaims): Promise<string> {
-    return new SignJWT(claims as unknown as Record<string, unknown>)
+    const builder = new SignJWT(claims as unknown as Record<string, unknown>)
       .setProtectedHeader({ alg: JWT_ALGORITHM, typ: "JWT" })
       .setIssuedAt(claims.iat)
       .setExpirationTime(claims.exp)
       .setIssuer(JWT_ISSUER)
       .setAudience(JWT_AUDIENCE)
-      .setSubject(claims.sub)
-      .sign(this.#secret);
+      .setSubject(claims.sub);
+    // Explicit setJti when present — the claims object already carries
+    // it, but using the dedicated setter makes the token anchor its
+    // `jti` claim unambiguously even if the schema shape changes.
+    if (claims.jti) builder.setJti(claims.jti);
+    return builder.sign(this.#secret);
   }
 
   /**

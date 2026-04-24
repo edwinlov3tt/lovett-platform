@@ -58,6 +58,11 @@ export function renderPage(input: PageChromeInput): string {
       --red-hover: #cf0e0f;
       --card-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px -8px rgba(0,0,0,0.08);
     }
+    /* Force light mode regardless of OS preference. Auth pages are the
+       public trust layer — light mode reads as clarity + official-ness.
+       Without color-scheme: light only, browsers auto-invert form
+       fields, scrollbars, and UA controls on dark-mode systems. */
+    html { color-scheme: light only; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--page-bg); color: var(--ink-900);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

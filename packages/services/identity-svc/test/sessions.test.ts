@@ -105,6 +105,26 @@ describe("SessionStore", () => {
     expect(replay).toEqual({ ok: false, reason: "reuse_detected" });
   });
 
+  it("reuse-detection persists the revoked session across subsequent calls", async () => {
+    // Stronger assertion than "the second refresh fails": after rotation,
+    // the original access token must no longer validate (its underlying
+    // session row has revokedAt set), and every subsequent replay of the
+    // old refresh token stays reuse_detected indefinitely.
+    const { store, userId } = makeStore();
+    const uid = await userId;
+    const first = await store.issue({ userId: uid, orgId: "default" });
+
+    await store.refresh(first.refreshToken);   // happy rotation, revokes original row
+
+    const validated = await store.validate(first.accessToken);
+    expect(validated).toBeNull();              // original session is dead
+
+    const replayA = await store.refresh(first.refreshToken);
+    const replayB = await store.refresh(first.refreshToken);
+    expect(replayA).toEqual({ ok: false, reason: "reuse_detected" });
+    expect(replayB).toEqual({ ok: false, reason: "reuse_detected" });
+  });
+
   it("refresh() returns reuse_detected when the session has already been revoked", async () => {
     const { store, userId } = makeStore();
     const uid = await userId;

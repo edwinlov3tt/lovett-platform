@@ -54,6 +54,20 @@ verifyRoutes.get("/", async (c) => {
 // ---- POST /auth/verify --------------------------------------------------
 
 verifyRoutes.post("/", async (c) => {
+  // CSRF hardening: consume only when the POST originates from the
+  // Gateway itself. A malicious site can't set Origin on a cross-site
+  // form POST to something it doesn't control, so checking
+  // `Origin === GATEWAY_ORIGIN` blocks the classic "attacker auto-
+  // submits a form to /auth/verify" attack without needing explicit
+  // CSRF tokens. We accept missing Origin for same-origin form POSTs
+  // from our own `/auth/verify` page (Safari historically strips it
+  // on same-origin submits) but reject any value that's set and
+  // doesn't match.
+  const origin = c.req.header("origin");
+  if (origin && !originMatches(origin, c.env.GATEWAY_ORIGIN)) {
+    return renderError(c, "Invalid sign-in origin.", undefined);
+  }
+
   const contentType = c.req.header("content-type") ?? "";
   let raw: unknown;
   if (contentType.includes("application/json")) {
@@ -125,6 +139,21 @@ verifyRoutes.post("/", async (c) => {
 });
 
 // ---- helpers -----------------------------------------------------------
+
+/**
+ * Normalize both sides to `{protocol}//{host}` (drop any path/query/fragment)
+ * before comparing. Any value that isn't a parseable URL is rejected as
+ * an invalid Origin — matches the browser's own behavior.
+ */
+function originMatches(incoming: string, gatewayOrigin: string): boolean {
+  try {
+    const a = new URL(incoming);
+    const b = new URL(gatewayOrigin);
+    return a.protocol === b.protocol && a.host === b.host;
+  } catch {
+    return false;
+  }
+}
 
 function renderError(c: VerifyCtx, message: string, redirectUri: string | undefined) {
   return c.html(
