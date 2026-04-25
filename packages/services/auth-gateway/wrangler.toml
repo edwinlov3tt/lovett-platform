@@ -64,6 +64,10 @@ name = "auth-gateway-prod"
 binding = "IDENTITY"
 service = "identity-svc-prod"
 
+[[env.production.routes]]
+pattern = "auth.edwinlovett.com"
+custom_domain = true
+
 [env.production.vars]
 MAGIC_LINK_FROM_ADDRESS = "noreply@edwinlovett.app"
 EMAILIT_API_BASE_URL = "https://api.emailit.com/v2"

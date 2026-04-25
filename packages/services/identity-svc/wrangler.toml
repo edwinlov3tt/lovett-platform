@@ -37,6 +37,6 @@ name = "identity-svc-prod"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "identity-db"
-database_id = "REPLACE_ME_production_d1_id"
+database_name = "identity-db-prod"
+database_id = "02467d91-4a2f-4913-85d5-ead716743a7d"
 migrations_dir = "migrations"
