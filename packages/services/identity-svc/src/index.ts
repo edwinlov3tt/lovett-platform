@@ -139,6 +139,20 @@ export class IdentityService extends WorkerEntrypoint<Env> {
     return { ok: true, ts: Math.floor(Date.now() / 1000) };
   }
 
+  // ---- Public HTTP surface (deliberately hostile) ---------------------
+  //
+  // Identity is internal-only. There's no `routes` block and no custom
+  // domain — the only way traffic ever reaches this method is via the
+  // workers.dev URL, which should never be hit by anything legitimate.
+  // We answer 403 with no body so probes get nothing useful; the class
+  // is still callable over RPC service bindings, which is the only
+  // sanctioned entry path. Declaring `fetch` here also satisfies
+  // wrangler's "script has at least one registered handler" check when
+  // publishing a Worker whose surface is otherwise RPC-only.
+  override async fetch(): Promise<Response> {
+    return new Response("forbidden", { status: 403 });
+  }
+
   // ---- Lazy collaborators ---------------------------------------------
   //
   // Allocated per-call. All use `this.env.DB` + `this.env.JWT_SECRET`,

@@ -29,7 +29,7 @@ name = "identity-svc-staging"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "identity-db"
-database_id = "REPLACE_ME_staging_d1_id"
+database_id = "21f8287f-ad3f-4ccd-b1a2-bc3e6f3ed3bf"
 migrations_dir = "migrations"
 
 [env.production]
