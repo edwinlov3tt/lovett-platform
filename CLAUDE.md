@@ -26,7 +26,7 @@ The architectural bet from day one: a clean **Gateway / Internal-service split c
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Gateway is public** (Hono, HTML pages + JSON API) and owns HTTP, cookies, CORS, Resend email sends.
+- **Gateway is public** (Hono, HTML pages + JSON API) and owns HTTP, cookies, CORS, and transactional email (Emailit, abstracted behind the `EmailSender` interface — see ADR 0004).
 - **Identity is internal-only** — no `routes` block in its wrangler config, not reachable from the internet. Other platform services bind to it the same way Gateway does, which is the whole payoff: zero network hops, sub-ms session validation.
 - **Types cross, code doesn't.** Gateway imports `IdentityService` as a type-only import from `@lovett/identity-svc`, gets full autocomplete on `env.IDENTITY.validateSession(...)`, but the Gateway bundle contains no identity-svc runtime code.
 
@@ -47,7 +47,7 @@ lovett-platform/
 │   │   │   │   ├── constants.ts    # ACCESS_TTL, REFRESH_TTL (mirrors identity-svc)
 │   │   │   │   ├── routes/         # magic-link, verify, session, refresh, logout
 │   │   │   │   ├── middleware/     # request-id, cors, logging
-│   │   │   │   ├── lib/            # cookies, redirect-validator, email (Resend), errors, email-template
+│   │   │   │   ├── lib/            # cookies, redirect-validator, errors, html-escape, email/ (sender interface + Emailit adapter + templates)
 │   │   │   │   └── pages/          # Light-mode HTML: shared chrome + login + verify + error
 │   │   │   ├── test/               # 31 tests: security, CSRF, CORS, cookies, e2e, fake-identity stub
 │   │   │   ├── wrangler.toml
@@ -123,16 +123,17 @@ lovett-platform/
 | `@lovett/auth-types` | ✅ |
 | `@lovett/db-utils` | ✅ |
 | `identity-svc` (schema + lib + WorkerEntrypoint + 21 tests) | ✅ |
-| `auth-gateway` (routes + middleware + HTML pages + 31 tests) | ✅ |
+| `auth-gateway` (routes + middleware + HTML pages + 47 tests) | ✅ |
 | `@lovett/auth` SDK (core + /react + 3 smoke tests) | ✅ |
 | CI workflow (`ci.yml`) | ✅ |
 | Deploy workflow (`deploy.yml`, path-filtered) | ✅ |
 | Identity RPC contract doc (`docs/services/identity-svc.md`) | ✅ |
 | `pnpm preview:auth` live-HTML preview script | ✅ |
-| **Total tests** | **55 / 55 passing** |
+| **Total tests** | **71 / 71 passing** |
 | **Typecheck** | **5 / 5 packages clean** |
-| First deploy to CF | ⏳ pending tokens + D1 provisioning |
-| Resend domain verification | ⏳ pending |
+| First deploy to CF — staging | ✅ `auth-staging.edwinlovett.com` (custom domain attached, Emailit email delivers, full Gateway → Identity → D1 chain healthy) |
+| First deploy to CF — production | ⏳ secrets + D1 provisioning + custom domain not yet wired |
+| Emailit domain (`edwinlovett.app`) | ✅ in use; deliverability tuning pending (mail to a Gmail inbox lands in Spam — needs DMARC + reputation warmup) |
 | Error alerting wire-up | ⏳ pending |
 | SDK integration in a real tool | ⏳ pending (first candidate: `tools.edwinlovett.com`) |
 
@@ -161,9 +162,9 @@ This is the pre-flight checklist. Nothing deploys until these are in place.
 
 | Value | Where |
 |---|---|
-| Resend API key (staging) | https://resend.com/api-keys |
-| Resend API key (production) | https://resend.com/api-keys |
-| Resend verified domain | https://resend.com/domains — verify `edwinlovett.com` (DNS TXT + DKIM). `noreply@edwinlovett.com` won't send until this is done. |
+| Emailit API key (staging) | https://emailit.com — create a scoped key for `auth-gateway-staging` |
+| Emailit API key (production) | https://emailit.com — create a scoped key for `auth-gateway-prod` |
+| Emailit verified domain | https://emailit.com/domains — verify `edwinlovett.app` (SPF + DKIM + return-path). `noreply@edwinlovett.app` won't send until this is done. See ADR 0004 for the Resend → Emailit rationale. |
 | Cloudflare API token | https://dash.cloudflare.com/profile/api-tokens — "Edit Cloudflare Workers" template |
 | Cloudflare Account ID | https://dash.cloudflare.com right sidebar |
 
@@ -195,8 +196,8 @@ npx wrangler secret put JWT_SECRET --env production       # paste JWT_SECRET_PRO
 cd ../auth-gateway
 npx wrangler secret put JWT_SECRET --env staging          # SAME value as identity-svc staging
 npx wrangler secret put JWT_SECRET --env production       # SAME value as identity-svc prod
-npx wrangler secret put RESEND_API_KEY --env staging
-npx wrangler secret put RESEND_API_KEY --env production
+npx wrangler secret put EMAILIT_API_KEY --env staging
+npx wrangler secret put EMAILIT_API_KEY --env production
 ```
 
 ### GitHub repo secrets
@@ -215,7 +216,7 @@ Cloudflare dashboard → Workers & Pages → select the deployed Gateway Worker 
 - Staging: `auth-staging.edwinlovett.com`
 - Production: `auth.edwinlovett.com`
 
-SSL auto-provisions. Resend's DNS records also go on `edwinlovett.com` (SPF + DKIM + return-path).
+SSL auto-provisions. Emailit's DNS records go on **`edwinlovett.app`** (SPF + DKIM + return-path) — platform auth uses the `.app` domain for sender reputation separation from the main `.com` site. See ADR 0004.
 
 ### Non-secret env vars already in `wrangler.toml`
 
@@ -223,7 +224,8 @@ Review + edit before first deploy — they're defaults, not facts:
 
 | Var | Default | Used for |
 |---|---|---|
-| `MAGIC_LINK_FROM_ADDRESS` | `noreply@edwinlovett.com` | Resend "from" header |
+| `MAGIC_LINK_FROM_ADDRESS` | `noreply@edwinlovett.app` | Email `from` header. Must be on the Emailit-verified domain. |
+| `EMAILIT_API_BASE_URL` | `https://api.emailit.com/v2` | Emailit REST base. Override for tests/canaries. |
 | `COOKIE_DOMAIN` | `.edwinlovett.com` | Cookies scoped to parent domain for cross-subdomain SSO |
 | `ALLOWED_ORIGINS` | `https://*.edwinlovett.com` | CORS allowlist |
 | `ALLOWED_REDIRECT_HOSTS` | `edwinlovett.com` | Redirect-URI host suffix allowlist |
@@ -329,9 +331,9 @@ Every RPC method on `IdentityService` has at least two tests: happy path and one
 
 - Framework: **vitest** (via `@cloudflare/vitest-pool-workers` for identity-svc — needs real D1; plain vitest for Gateway since it uses the fake).
 - `identity-svc` vitest config uses `singleWorker: true` + `isolatedStorage: false` — this sidesteps a miniflare cleanup quirk with D1's WAL files. We explicitly reset the DB in `beforeEach` instead.
-- No test uses real Resend / real Cloudflare API / real DNS. Everything mockable.
+- No test uses real Emailit / real Cloudflare API / real DNS. Everything mockable — `EmailitSender` tests stub `fetch`, route tests inject a recording `EmailSender` via `Env._testEmailSender`.
 
-Current counts: `identity-svc` 21 · `auth-gateway` 31 · `@lovett/auth` 3 · total **55**.
+Current counts: `identity-svc` 21 · `auth-gateway` 47 · `@lovett/auth` 3 · total **71**.
 
 ---
 

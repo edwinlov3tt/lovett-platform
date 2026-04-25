@@ -62,8 +62,9 @@ Set via `wrangler secret put …` and `[env.X.vars]` in `wrangler.toml`. Nothing
 | Name | Where | Purpose |
 |------|-------|---------|
 | `JWT_SECRET` | secret | HS256 signing key (must match Identity) |
-| `RESEND_API_KEY` | secret | Magic-link email |
-| `MAGIC_LINK_FROM_ADDRESS` | var | e.g. `noreply@edwinlovett.com` |
+| `EMAILIT_API_KEY` | secret | Magic-link email via Emailit (see [ADR 0004](docs/services/0004-email-provider-strategy.md)) |
+| `EMAILIT_API_BASE_URL` | var | Override Emailit base URL; defaults to `https://api.emailit.com/v2` |
+| `MAGIC_LINK_FROM_ADDRESS` | var | e.g. `noreply@edwinlovett.app` (must be on the Emailit-verified sender domain) |
 | `COOKIE_DOMAIN` | var | e.g. `.edwinlovett.com` — parent domain for cross-subdomain SSO |
 | `ALLOWED_ORIGINS` | var | CORS allowlist, comma-separated |
 | `ALLOWED_REDIRECT_HOSTS` | var | `redirect_uri` host allowlist, comma-separated |
