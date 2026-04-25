@@ -21,7 +21,7 @@ export const authErrorCode = z.enum([
   "session_revoked",       // 401 — session was revoked server-side
   "refresh_reuse",         // 401 — reused refresh token (attack signal)
   "rate_limited",          // 429
-  "upstream_unavailable",  // 502 — Resend down, Identity RPC failure, etc.
+  "upstream_unavailable",  // 502 — email provider down, Identity RPC failure, etc.
   "internal_error",        // 500
 ]);
 export type AuthErrorCode = z.infer<typeof authErrorCode>;

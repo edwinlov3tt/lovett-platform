@@ -17,7 +17,8 @@ export function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
     IDENTITY: identity as unknown as Env["IDENTITY"],
     JWT_SECRET: TEST_JWT_SECRET,
-    RESEND_API_KEY: "",                                   // no-op email send in tests
+    EMAILIT_API_KEY: "",                                  // no-op email send in tests
+    EMAILIT_API_BASE_URL: "https://api.emailit.test/v2",  // never actually called
     MAGIC_LINK_FROM_ADDRESS: "noreply@test.invalid",
     COOKIE_DOMAIN: "localhost",
     ALLOWED_ORIGINS: "http://localhost:3000",

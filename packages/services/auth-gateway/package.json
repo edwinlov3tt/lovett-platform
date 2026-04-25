@@ -2,7 +2,7 @@
   "name": "@lovett/auth-gateway",
   "version": "0.1.0",
   "private": true,
-  "description": "Public auth gateway. Hono Worker at auth.edwinlovett.com. Owns HTTP, cookies, HTML auth pages, Resend sends. Calls identity-svc via RPC; never touches D1 directly.",
+  "description": "Public auth gateway. Hono Worker at auth.edwinlovett.com. Owns HTTP, cookies, HTML auth pages, and transactional email (Emailit via EmailSender interface; see ADR 0004). Calls identity-svc via RPC; never touches D1 directly.",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {

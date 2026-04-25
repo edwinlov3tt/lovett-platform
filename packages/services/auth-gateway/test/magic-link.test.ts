@@ -9,7 +9,18 @@
 
 import { describe, expect, it } from "vitest";
 import app from "../src/index.js";
+import type {
+  EmailSender,
+  SendMagicLinkParams,
+} from "../src/lib/email/sender.js";
 import { makeEnv } from "./helpers.js";
+
+class RecordingSender implements EmailSender {
+  public calls: SendMagicLinkParams[] = [];
+  async sendMagicLink(params: SendMagicLinkParams): Promise<void> {
+    this.calls.push(params);
+  }
+}
 
 describe("POST /auth/magic-link", () => {
   it("returns ok:true for a valid email", async () => {
@@ -90,5 +101,34 @@ describe("POST /auth/magic-link", () => {
       env,
     );
     expect(res.status).toBe(400);
+  });
+
+  it("invokes the injected EmailSender with the expected verification URL + TTL", async () => {
+    const sender = new RecordingSender();
+    const env = makeEnv({ _testEmailSender: sender });
+    const res = await app.request(
+      "/auth/magic-link",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "ed@example.com",
+          redirect_uri: "https://tools.edwinlovett.com/home",
+        }),
+      },
+      env,
+    );
+    expect(res.status).toBe(200);
+
+    expect(sender.calls).toHaveLength(1);
+    const call = sender.calls[0]!;
+    expect(call.to).toBe("ed@example.com");
+    expect(call.expiresInMinutes).toBe(15);
+
+    const verify = new URL(call.verificationUrl);
+    expect(verify.origin).toBe(env.GATEWAY_ORIGIN);
+    expect(verify.pathname).toBe("/auth/verify");
+    expect(verify.searchParams.get("token")).toBeTruthy();
+    expect(verify.searchParams.get("redirect")).toBe("https://tools.edwinlovett.com/home");
   });
 });

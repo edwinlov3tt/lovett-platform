@@ -9,7 +9,7 @@
  * were trying to go.
  */
 
-import { escapeHtml } from "../lib/email-template.js";
+import { escapeHtml } from "../lib/html-escape.js";
 import { renderPage } from "./shared.js";
 
 export interface ErrorPageInput {

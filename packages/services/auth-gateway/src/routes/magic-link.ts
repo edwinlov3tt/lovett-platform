@@ -7,12 +7,17 @@
  * Public endpoint. Takes an email (+ optional redirect_uri) and:
  *   1. Validates the redirect against ALLOWED_REDIRECT_HOSTS
  *   2. Calls IDENTITY.createMagicLinkToken to get a plaintext token
- *   3. Sends an email (Resend) containing `{gateway}/auth/verify?token=…&redirect=…`
+ *   3. Sends an email (via the injected EmailSender) containing
+ *      `{gateway}/auth/verify?token=…&redirect=…`
  *   4. Returns `{ ok: true }` ALWAYS — no user enumeration
  *
- * The email is fire-and-forget via waitUntil so the response isn't gated
- * on Resend latency. If Resend is down, the user sees a success response
- * and no email; they can hit /login again after the 60-sec window.
+ * The email is fire-and-forget via waitUntil so the response isn't
+ * gated on provider latency. If the upstream is down, the user sees a
+ * success response and no email; they can re-request after the window.
+ *
+ * This route imports the EmailSender *interface*, not any concrete
+ * provider. buildEmailSender() in lib/email/factory decides which
+ * adapter to instantiate at request time. See ADR 0004.
  */
 
 import { Hono } from "hono";
@@ -20,8 +25,9 @@ import { magicLinkRequest, type MagicLinkResponse } from "@lovett/auth-types";
 import type { Env, Variables } from "../env.js";
 import { AuthError } from "../lib/errors.js";
 import { validateRedirectUri } from "../lib/redirect-validator.js";
-import { magicLinkEmail } from "../lib/email-template.js";
-import { sendEmail } from "../lib/email.js";
+import { buildEmailSender } from "../lib/email/factory.js";
+
+const MAGIC_LINK_TTL_MINUTES = 15;
 
 export const magicLinkRoutes = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -53,17 +59,25 @@ magicLinkRoutes.post("/", async (c) => {
       ipAddress: c.req.header("cf-connecting-ip") ?? undefined,
     });
 
-    const url = buildVerifyUrl(c.env.GATEWAY_ORIGIN, token, redirect_uri);
-    const { subject, html, text } = magicLinkEmail({
-      link: url,
-      email,
-      platformName: c.env.PLATFORM_NAME,
-    });
+    const verificationUrl = buildVerifyUrl(c.env.GATEWAY_ORIGIN, token, redirect_uri);
+    const sender = buildEmailSender(c.env);
 
-    const emailPromise = sendEmail(c.env, { to: email, subject, html, text }).catch((err) => {
-      console.error(JSON.stringify({ type: "auth.magic_link.email_failed", err: String(err) }));
-    });
-    waitUntil(c, emailPromise);
+    const sendPromise = sender
+      .sendMagicLink({
+        to: email,
+        verificationUrl,
+        expiresInMinutes: MAGIC_LINK_TTL_MINUTES,
+      })
+      .catch((err) => {
+        console.error(
+          JSON.stringify({
+            type: "auth.magic_link.email_failed",
+            requestId: c.get("requestId"),
+            err: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      });
+    waitUntil(c, sendPromise);
 
     console.log(
       JSON.stringify({ type: "auth.magic_link.requested", email, requestId: c.get("requestId") }),

@@ -9,6 +9,7 @@
  */
 
 import type { IdentityService } from "@lovett/identity-svc";
+import type { EmailSender } from "./lib/email/sender.js";
 
 export interface Env {
   IDENTITY: Service<IdentityService>;
@@ -16,10 +17,21 @@ export interface Env {
   /** HS256 signing key shared with identity-svc. */
   JWT_SECRET: string;
 
-  /** Resend API key for outbound magic-link emails. */
-  RESEND_API_KEY: string;
+  /**
+   * Emailit API key for outbound magic-link emails (secret).
+   * Empty string → Gateway falls back to NoopEmailSender (dev-only;
+   * staging/prod must have this set). See ADR 0004.
+   */
+  EMAILIT_API_KEY: string;
 
-  /** e.g. "noreply@edwinlovett.com" */
+  /**
+   * Override the Emailit API base URL. Optional — defaults to
+   * https://api.emailit.com/v2 when unset. Exists so tests + a future
+   * CI canary can point at a local mock without touching prod traffic.
+   */
+  EMAILIT_API_BASE_URL?: string;
+
+  /** e.g. "noreply@edwinlovett.app". Must be on a verified Emailit domain. */
   MAGIC_LINK_FROM_ADDRESS: string;
 
   /**
@@ -47,6 +59,14 @@ export interface Env {
 
   /** Set by wrangler. `development` in dev, `staging`/`production` when deployed. */
   ENVIRONMENT?: string;
+
+  /**
+   * Test-only override. When set, buildEmailSender() returns this
+   * instance instead of constructing a live Emailit adapter. Never
+   * populated by the Cloudflare runtime — test helpers write it into
+   * the env passed to `app.request(url, init, env)`.
+   */
+  _testEmailSender?: EmailSender;
 }
 
 export type Variables = {

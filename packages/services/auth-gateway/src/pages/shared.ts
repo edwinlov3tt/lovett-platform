@@ -17,7 +17,7 @@
  * that MUST work even when everything else is broken.
  */
 
-import { escapeHtml } from "../lib/email-template.js";
+import { escapeHtml } from "../lib/html-escape.js";
 
 export interface PageChromeInput {
   title: string;

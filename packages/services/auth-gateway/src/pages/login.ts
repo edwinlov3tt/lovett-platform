@@ -7,7 +7,7 @@
  * page is ~20 lines of logic. Keeps the served HTML self-contained.
  */
 
-import { escapeHtml } from "../lib/email-template.js";
+import { escapeHtml } from "../lib/html-escape.js";
 import { renderPage } from "./shared.js";
 
 export interface LoginPageInput {

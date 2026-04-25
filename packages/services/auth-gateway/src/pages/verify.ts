@@ -14,7 +14,7 @@
  * scanners reliably don't synthesize form submissions.
  */
 
-import { escapeHtml } from "../lib/email-template.js";
+import { escapeHtml } from "../lib/html-escape.js";
 import { renderPage } from "./shared.js";
 
 export interface VerifyPageInput {
